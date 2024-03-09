@@ -1,12 +1,32 @@
 const express = require('express');
 const books = require('./books');
 const { body, validationResult } = require('express-validator')
+const config = require('config')
+const morgan = require('morgan')
 const app = express();
 app.use(express.json())
+app.use(express.urlencoded({ extended: true }))
+app.use(express.static('public'))
+app.set('view engine', 'pug')
+
+
+if (app.get('env') === 'development') {
+    app.use(morgan('tiny'))
+    console.log('Logger ishlayapti.....')
+}
+
+
+console.log(process.env.NODE_ENV)
+console.log(app.get('env'))
+
+console.log(config.get("name"))
+console.log(config.get('mailserver.host'))
+// console.log(config.get('mailserver.password'))
+
 
 
 app.get('/', (req, res) => {
-    res.send("Assalomu alaykum!")
+    res.render('index', { title: "my express app", greeting: "Assalomu alaykum!" })
 })
 
 app.get('/api/books', (req, res) => {
@@ -71,8 +91,7 @@ app.delete('/api/books/:id', (req, res) => {
     if (!book)
         res.status(404).send("Bunday kitob mavjud emas!")
 
-    // const findIndex = books.findIndex(book => book.id === parseInt(req.params.id))
-    const findIndex= books.indexOf(book)
+    const findIndex = books.indexOf(book)
     books.splice(findIndex, 1)
 
     res.send("Successfully deleted!!!")
