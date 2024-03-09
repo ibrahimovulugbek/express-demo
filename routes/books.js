@@ -1,81 +1,89 @@
 const express = require('express');
 const router = express.Router();
 const { body, validationResult } = require('express-validator');
+const mongoose = require("mongoose");
+const bookSchema = require("./book-schema");
 
-const books = [
-    { id: 1, title: "Zukkolar va landavurlar" },
-    { id: 2, title: "Iroda kuchi" },
-    { id: 3, title: "Diqqat" },
-    { id: 4, title: "Atom odatlar" },
-    { id: 5, title: "Mafavvaqiyatli insonlarning 7 ko'nikmasi" }
-]
+const Book = mongoose.model("Book", bookSchema)
 
-
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
+    const books = await Book.find()
     res.send(books)
 })
 
-router.get('/:id', (req, res) => {
-    let booook = books.find(book => {
-        return book.id === parseInt(req.params.id)
-    })
-
-    if (!booook)
+router.get('/:id', async (req, res) => {
+    const book = await Book.findById(req.params.id)
+    if (!book)
         return res.status(404).send("Bunday kitob topilmadi!!!")
 
-    res.send(booook)
+    res.send(book)
 })
 
 router.post('/',
     [
         [
-            body('name').isString(),
-            body('name').trim().notEmpty()
+            body('title').isString(),
+            body('title').trim().notEmpty()
         ]
     ],
-    (req, res) => {
+    async (req, res) => {
         const errors = validationResult(req)
         if (!errors.isEmpty())
             return res.status(400).send(errors.array())
 
-        let book = {
-            id: books.length + 1,
-            name: req.body.name
+        const newBook = new Book({
+            title: req.body.title,
+            author: req.body.author,
+            tags: req.body.tags,
+            isPublished: req.body.isPublished,
+            pages: req.body.pages || null,
+            price: req.body.price,
+            category: req.body.category,
+            lowercase: req.body.lowercase || true,
+            trim: req.body.trim || true
+        })
+        try {
+            const createBook = await newBook.save()
+            res.status(201).send(createBook);
+        } catch (err) {
+            console.log(err);
         }
-        books.push(book)
-        res.status(201).send(book);
     }
 )
 
 router.put('/:id',
     [
         [
-            body('name').isString(),
-            body('name').trim().notEmpty()
+            body('title').isString(),
+            body('title').trim().notEmpty()
         ]
     ],
-    (req, res) => {
-        const book = books.find(book => book.id === parseInt(req.params.id));
+    async (req, res) => {
+        const book = await Book.updateMany({ _id: req.params.id }, {
+            $set: {
+                author: "Dildora",
+                isPublished: false
+            }
+        })
         if (!book) {
             return res.status(404).send("Bunday kitob mavjud emas!")
         }
+
         const errors = validationResult(req)
         if (!errors.isEmpty())
-            return res.status(400).send("Name parameti to'g'ri kiritilmagan!!")
+            return res.status(400).send("title parameti to'g'ri kiritilmagan!!")
 
-        book.title = req.body.name
         res.send(book)
     })
 
-router.delete('/:id', (req, res) => {
-    const book = books.find(book => book.id === parseInt(req.params.id));
+router.delete('/:id', async (req, res) => {
+    const book = await Book.findByIdAndRemove({ _id: req.params.id });
     if (!book)
         return res.status(404).send("Bunday kitob mavjud emas!")
 
-    const findIndex = books.indexOf(book)
-    books.splice(findIndex, 1)
+    const deletedBook = Book.deleteOne({ _id: req.params.id })
 
-    res.send("Successfully deleted!!!")
+    res.send(deletedBook)
 })
 
 
